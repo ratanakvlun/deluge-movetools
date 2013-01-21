@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<glade-interface>
+  <!-- interface-requires gtk+ 2.16 -->
+  <!-- interface-naming-policy toplevel-contextual -->
+  <widget class="GtkWindow" id="wnd_preferences">
+    <child>
+      <widget class="GtkAlignment" id="blk_preferences">
+        <property name="visible">True</property>
+        <property name="top_padding">5</property>
+        <property name="bottom_padding">5</property>
+        <property name="left_padding">5</property>
+        <property name="right_padding">5</property>
+        <child>
+          <widget class="GtkVBox" id="vbox1">
+            <property name="visible">True</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">16</property>
+            <child>
+              <widget class="GtkVBox" id="vbox3">
+                <property name="visible">True</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <child>
+                  <widget class="GtkLabel" id="lbl_general">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">General</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkCheckButton" id="chk_remove_empty">
+                    <property name="label" translatable="yes">Remove empty folders on move</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="draw_indicator">True</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkVBox" id="vbox2">
+                <property name="visible">True</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <child>
+                  <widget class="GtkLabel" id="lbl_timeout">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Status Timeout</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkTable" id="table1">
+                    <property name="visible">True</property>
+                    <property name="n_rows">2</property>
+                    <property name="n_columns">3</property>
+                    <property name="column_spacing">10</property>
+                    <property name="row_spacing">5</property>
+                    <child>
+                      <widget class="GtkLabel" id="label2">
+                        <property name="visible">True</property>
+                        <property name="xalign">1</property>
+                        <property name="label" translatable="yes">Success</property>
+                      </widget>
+                      <packing>
+                        <property name="x_options">GTK_FILL</property>
+                        <property name="y_options">GTK_FILL</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="label3">
+                        <property name="visible">True</property>
+                        <property name="xalign">1</property>
+                        <property name="label" translatable="yes">Error</property>
+                      </widget>
+                      <packing>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                        <property name="x_options">GTK_FILL</property>
+                        <property name="y_options">GTK_FILL</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkSpinButton" id="spn_success_timeout">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="invisible_char">&#x25CF;</property>
+                        <property name="adjustment">0 -1 100000 1 10 0</property>
+                        <property name="numeric">True</property>
+                      </widget>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                        <property name="x_options">GTK_FILL</property>
+                        <property name="y_options">GTK_FILL</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkSpinButton" id="spn_error_timeout">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="invisible_char">&#x25CF;</property>
+                        <property name="adjustment">0 -1 100000 1 10 0</property>
+                        <property name="numeric">True</property>
+                      </widget>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                        <property name="x_options">GTK_FILL</property>
+                        <property name="y_options">GTK_FILL</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="label5">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">seconds</property>
+                      </widget>
+                      <packing>
+                        <property name="left_attach">2</property>
+                        <property name="right_attach">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="label6">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">seconds</property>
+                      </widget>
+                      <packing>
+                        <property name="left_attach">2</property>
+                        <property name="right_attach">3</property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                      </packing>
+                    </child>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </widget>
+        </child>
+      </widget>
+    </child>
+  </widget>
+</glade-interface>
