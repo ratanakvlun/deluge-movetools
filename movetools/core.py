@@ -92,6 +92,10 @@ class Core(CorePluginBase):
       self._cancel_deferred(id)
 
       old_path = obj.get_status(["save_path"])["save_path"]
+      if old_path == dest:
+        self.status[id] = "%s: %s" % (_("Error"), _("Same path"))
+        self._clear_move_status(id, self.timeout["error"])
+        return False
 
       _orig_move_storage = self.orig_move_storage
       result = _orig_move_storage(obj, dest)
