@@ -174,8 +174,7 @@ class Core(CorePluginBase):
             self.status[id] = "%s: %s" % (_("Error"), _("Pathname is empty"))
             self._clear_move_status(id, self.timeout["error"])
           elif not torrent.move_storage(dest):
-            log.error("[%s] Could not move storage: %s",
-                const.PLUGIN_NAME, id)
+            log.error("[%s] Could not move storage: %s", PLUGIN_NAME, id)
 
   def on_storage_moved(self, alert):
     id = str(alert.handle.info_hash())
