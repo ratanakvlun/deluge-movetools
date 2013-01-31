@@ -1,0 +1,3 @@
+Version 0.1.6
+- Detect attempts to move to the same path
+- Minor fixes
