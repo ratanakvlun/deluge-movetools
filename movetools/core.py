@@ -171,7 +171,7 @@ class Core(CorePluginBase):
           dest = torrent.options["move_completed_path"]
           if not dest:
             self._cancel_deferred(id)
-            self.status[id] = "%s: %s" % (_("Error"), _("Pathname is empty."))
+            self.status[id] = "%s: %s" % (_("Error"), _("Pathname is empty"))
             self._clear_move_status(id, self.timeout["error"])
           elif not torrent.move_storage(dest):
             log.error("[%s] Could not move storage: %s",
