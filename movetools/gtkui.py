@@ -134,25 +134,26 @@ class GtkUI(GtkPluginBase):
   def _create_menu(self):
     menu = gtk.MenuItem(DISPLAY_NAME)
     submenu = gtk.Menu()
-    menu.set_submenu(submenu)
 
-    item = gtk.MenuItem(_("Move Status"))
-    submenu.append(item)
-
-    submenu = gtk.Menu()
-    item.set_submenu(submenu)
-
-    item = gtk.MenuItem(_("Clear"))
-    item.connect("activate", self._do_clear_selected)
-    submenu.append(item)
-
-    item = gtk.MenuItem(_("Clear All"))
-    item.connect("activate", self._do_clear_all)
-    submenu.append(item)
+    status_item = gtk.MenuItem(_("Move Status"))
+    submenu.append(status_item)
 
     item = gtk.MenuItem(_("Move Completed"))
     item.connect("activate", self._do_move_completed)
-    menu.get_submenu().append(item)
+    submenu.append(item)
+
+    status_submenu = gtk.Menu()
+
+    item = gtk.MenuItem(_("Clear"))
+    item.connect("activate", self._do_clear_selected)
+    status_submenu.append(item)
+
+    item = gtk.MenuItem(_("Clear All"))
+    item.connect("activate", self._do_clear_all)
+    status_submenu.append(item)
+
+    status_item.set_submenu(status_submenu)
+    menu.set_submenu(submenu)
 
     return menu
 
