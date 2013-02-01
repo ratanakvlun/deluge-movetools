@@ -93,6 +93,8 @@ class GtkUI(GtkPluginBase):
     component.get("MenuBar").torrentmenu.remove(self.sep)
     component.get("MenuBar").torrentmenu.remove(self.menu)
 
+    self.menu.destroy()
+
     component.get("Preferences").remove_page(DISPLAY_NAME)
     component.get("PluginManager").deregister_hook(
         "on_apply_prefs", self._do_save_settings)
