@@ -134,7 +134,7 @@ class Core(CorePluginBase):
       log.debug("[%s] (Wrapped) Move storage on: %s", PLUGIN_NAME, id)
 
       status = self.status.get(id, None)
-      if status and status != "Done":
+      if status == "Moving":
         log.debug("[%s] Unable to move torrent: already moving", PLUGIN_NAME)
         return False
 
