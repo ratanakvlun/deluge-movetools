@@ -173,8 +173,7 @@ class GtkUI(GtkPluginBase):
     client.movetools.clear_all_status()
 
   def _add_column(self):
-    renderer = gtk.CellRendererText()
-    renderer.set_padding(5, 0)
+    renderer = gtk.CellRendererProgress()
 
     component.get("TorrentView").add_column(
       header=COLUMN_NAME,
@@ -183,9 +182,30 @@ class GtkUI(GtkPluginBase):
       hidden=False,
       position=None,
       status_field=[MODULE_NAME],
+      function=self._render_cell,
       sortid=0,
-      column_type="text",
+      column_type="progress",
     )
+
+  def _render_cell(self, column, cell, model, iter, data):
+    cell.set_property("value", 0.0)
+
+    data = model[iter][data[0]]
+    if data is not None:
+      try:
+        value = float(data)
+        cell.set_property("value", value)
+
+        if value < 100.0:
+          cell_str = "%s %.2f%%" % (_("Moving"), value)
+          cell.set_property("text", cell_str)
+        else:
+          cell.set_property("text", _("Moving"))
+      except ValueError:
+        if data == "Done":
+          cell.set_property("value", 100.0)
+
+        cell.set_property("text", _(data))
 
   def _remove_column(self):
     component.get("TorrentView").remove_column(COLUMN_NAME)
