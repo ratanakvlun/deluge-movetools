@@ -189,9 +189,12 @@ class GtkUI(GtkPluginBase):
 
   def _render_cell(self, column, cell, model, iter, data):
     cell.set_property("value", 0.0)
+    cell.set_property("visible", False)
 
     data = model[iter][data[0]]
-    if data is not None:
+    if data:
+      cell.set_property("visible", True)
+
       try:
         value = float(data)
         cell.set_property("value", value)
