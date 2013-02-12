@@ -255,7 +255,7 @@ class Core(CorePluginBase):
     if status == "Moving":
       progress = self.progress[id].progress
       if progress < 100.0:
-        return str(progress)
+        status = "%s %.2f" % (status, progress)
 
     return status
 

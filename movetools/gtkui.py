@@ -196,7 +196,7 @@ class GtkUI(GtkPluginBase):
       cell.set_property("visible", True)
 
       try:
-        value = float(data)
+        value = float(data.split()[-1])
         cell.set_property("value", value)
 
         cell_str = "%s %.2f%%" % (_("Moving"), value)
