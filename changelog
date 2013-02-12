@@ -1,3 +1,7 @@
+Version 0.1.7
+- Change column to use progress bar (adapted from Smart Move)
+- Minor fixes
+
 Version 0.1.6
 - Detect attempts to move to the same path
 - Minor fixes

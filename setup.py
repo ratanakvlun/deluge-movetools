@@ -42,7 +42,7 @@ from setuptools import setup
 __plugin_name__ = "MoveTools"
 __author__ = "Ratanak Lun"
 __author_email__ = "ratanakvlun@gmail.com"
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 __url__ = "http://github.com/ratanakvlun"
 __license__ = "GPLv3"
 __description__ = "Tools for moving torrents"
