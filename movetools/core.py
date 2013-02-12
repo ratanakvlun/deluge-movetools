@@ -39,6 +39,7 @@
 
 
 import os
+import os.path
 
 from twisted.internet import reactor
 
@@ -64,6 +65,34 @@ DEFAULT_PREFS = {
 }
 
 
+class MoveProgress(object):
+
+  def __init__(self, torrent, src, dest):
+    files = torrent.get_files()
+
+    src_paths = (os.path.join(src, file["path"]) for file in files)
+    self.total = self._get_size(src_paths)
+
+    self.paths = [os.path.join(dest, file["path"]) for file in files]
+
+  def _get_size(self, paths):
+    size = 0
+    for path in paths:
+      try:
+        size += os.path.getsize(path)
+      except OSError:
+        pass
+
+    return size
+
+  @property
+  def progress(self):
+    if self.total == 0:
+      return 0.0
+
+    return float(self._get_size(self.paths)) / self.total * 100
+
+
 class Core(CorePluginBase):
 
   def enable(self):
@@ -77,6 +106,7 @@ class Core(CorePluginBase):
     self.status = {}
     self.deferred = {}
     self.paths = {}
+    self.progress = {}
 
     component.get("AlertManager").register_handler(
         "storage_moved_alert", self.on_storage_moved)
@@ -101,6 +131,7 @@ class Core(CorePluginBase):
       result = _orig_move_storage(obj, dest)
       if result:
         self.status[id] = _("Moving")
+        self.progress[id] = MoveProgress(obj, old_path, dest)
 
         if self.general["remove_empty"]:
           self.paths[id] = old_path
@@ -213,7 +244,12 @@ class Core(CorePluginBase):
       log.debug("[%s] Error: %s", PLUGIN_NAME, message)
 
   def _get_move_status(self, id):
-    return self.status.get(id) or ""
+    status = self.status.get(id, "")
+
+    if status == _("Moving"):
+      return str(self.progress[id].progress)
+
+    return status
 
   def _clear_move_status(self, id, secs=0):
     if secs > 0:
@@ -223,6 +259,10 @@ class Core(CorePluginBase):
       if id in self.status:
         if id in self.deferred:
           del self.deferred[id]
+
+        if id in self.progress:
+          del self.progress[id]
+
         del self.status[id]
 
   def _cancel_deferred(self, id):
