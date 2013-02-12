@@ -119,6 +119,12 @@ class Core(CorePluginBase):
     def wrapper(obj, dest):
       id = str(obj.handle.info_hash())
       log.debug("[%s] (Wrapped) Move storage on: %s", PLUGIN_NAME, id)
+
+      status = self.status.get(id, None)
+      if status and status != "Done":
+        log.debug("[%s] Unable to move torrent: already moving", PLUGIN_NAME)
+        return False
+
       self._cancel_deferred(id)
 
       old_path = obj.get_status(["save_path"])["save_path"]
