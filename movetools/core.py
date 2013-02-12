@@ -40,6 +40,7 @@
 
 import os
 import os.path
+import threading
 
 from twisted.internet import reactor
 
@@ -71,9 +72,28 @@ class MoveProgress(object):
     files = torrent.get_files()
 
     src_paths = (os.path.join(src, file["path"]) for file in files)
-    self.total = self._get_size(src_paths)
+    self._total = self._get_size(src_paths)
 
-    self.paths = [os.path.join(dest, file["path"]) for file in files]
+    self._paths = tuple(os.path.join(dest, file["path"]) for file in files)
+
+    self._lock = threading.Lock()
+    self._progress = 0.0
+
+  @property
+  def progress(self):
+    self.update()
+    return self._progress
+
+  def update(self):
+    if self._lock.acquire(False):
+      try:
+        threading.Thread(target=self._thread_update_progress).start()
+      finally:
+        self._lock.release()
+
+  def _thread_update_progress(self):
+    size = self._get_size(self._paths)
+    self._progress = float(size) / (self._total or 1) * 100
 
   def _get_size(self, paths):
     size = 0
@@ -84,13 +104,6 @@ class MoveProgress(object):
         pass
 
     return size
-
-  @property
-  def progress(self):
-    if self.total == 0:
-      return 0.0
-
-    return float(self._get_size(self.paths)) / self.total * 100
 
 
 class Core(CorePluginBase):
