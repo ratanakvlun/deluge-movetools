@@ -199,13 +199,10 @@ class GtkUI(GtkPluginBase):
         value = float(data)
         cell.set_property("value", value)
 
-        if value < 100.0:
-          cell_str = "%s %.2f%%" % (_("Moving"), value)
-          cell.set_property("text", cell_str)
-        else:
-          cell.set_property("text", _("Moving"))
+        cell_str = "%s %.2f%%" % (_("Moving"), value)
+        cell.set_property("text", cell_str)
       except ValueError:
-        if data == "Done":
+        if data == "Done" or data == "Moving":
           cell.set_property("value", 100.0)
 
         cell.set_property("text", _(data))

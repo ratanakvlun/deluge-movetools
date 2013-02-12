@@ -253,7 +253,9 @@ class Core(CorePluginBase):
     status = self.status.get(id, "")
 
     if status == "Moving":
-      return str(self.progress[id].progress)
+      progress = self.progress[id].progress
+      if progress < 100.0:
+        return str(progress)
 
     return status
 
