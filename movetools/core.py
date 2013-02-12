@@ -123,20 +123,20 @@ class Core(CorePluginBase):
 
       old_path = obj.get_status(["save_path"])["save_path"]
       if old_path == dest:
-        self.status[id] = "%s: %s" % (_("Error"), _("Same path"))
+        self.status[id] = "%s: %s" % ("Error", "Same path")
         self._clear_move_status(id, self.timeout["error"])
         return False
 
       _orig_move_storage = self.orig_move_storage
       result = _orig_move_storage(obj, dest)
       if result:
-        self.status[id] = _("Moving")
+        self.status[id] = "Moving"
         self.progress[id] = MoveProgress(obj, old_path, dest)
 
         if self.general["remove_empty"]:
           self.paths[id] = old_path
       else:
-        self.status[id] = "%s: %s" % (_("Error"), _("General failure"))
+        self.status[id] = "%s: %s" % ("Error", "General failure")
         self._clear_move_status(id, self.timeout["error"])
 
       return result
@@ -183,7 +183,7 @@ class Core(CorePluginBase):
   def clear_selected(self, ids):
     log.debug("[%s] Clearing status results for: %s", PLUGIN_NAME, ids)
     for id in ids:
-      if id in self.status and self.status[id] != _("Moving"):
+      if id in self.status and self.status[id] != "Moving":
         self._cancel_deferred(id)
         self._clear_move_status(id)
 
@@ -191,7 +191,7 @@ class Core(CorePluginBase):
   def clear_all_status(self):
     log.debug("[%s] Clearing all status results", PLUGIN_NAME)
     for id in self.status.keys():
-      if self.status[id] != _("Moving"):
+      if self.status[id] != "Moving":
         self._cancel_deferred(id)
         self._clear_move_status(id)
 
@@ -206,7 +206,7 @@ class Core(CorePluginBase):
           dest = torrent.options["move_completed_path"]
           if not dest:
             self._cancel_deferred(id)
-            self.status[id] = "%s: %s" % (_("Error"), _("Pathname is empty"))
+            self.status[id] = "%s: %s" % ("Error", "Pathname is empty")
             self._clear_move_status(id, self.timeout["error"])
           elif not torrent.move_storage(dest):
             log.error("[%s] Could not move storage: %s", PLUGIN_NAME, id)
@@ -227,7 +227,7 @@ class Core(CorePluginBase):
 
     if id in self.status:
       self._cancel_deferred(id)
-      self.status[id] = _("Done")
+      self.status[id] = "Done"
       self._clear_move_status(id, self.timeout["success"])
 
   def on_storage_moved_failed(self, alert):
@@ -239,14 +239,14 @@ class Core(CorePluginBase):
     if id in self.status:
       self._cancel_deferred(id)
       message = alert.message().rpartition(":")[2].strip()
-      self.status[id] = "%s: %s" % (_("Error"), _(message))
+      self.status[id] = "%s: %s" % ("Error", message)
       self._clear_move_status(id, self.timeout["error"])
       log.debug("[%s] Error: %s", PLUGIN_NAME, message)
 
   def _get_move_status(self, id):
     status = self.status.get(id, "")
 
-    if status == _("Moving"):
+    if status == "Moving":
       return str(self.progress[id].progress)
 
     return status
