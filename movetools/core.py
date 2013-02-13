@@ -66,44 +66,102 @@ DEFAULT_PREFS = {
 }
 
 
-class MoveProgress(object):
+def get_total_size(paths):
+  size = 0
+  for path in paths:
+    try:
+      size += os.path.getsize(path)
+    except OSError:
+      pass
+
+  return size
+
+
+class ProgressThread(object):
+
+  def __init__(self):
+    self._queue = []
+    self._priority = []
+    self._queue_cond = threading.Condition()
+
+    self._thread = threading.Thread(target=self._thread_main)
+    self._thread.start()
+    log.debug("[%s] Progress processing thread started", PLUGIN_NAME)
+
+  def stop(self):
+    self.queue_update(None)
+    self._thread.join()
+    log.debug("[%s] Progress processing thread stopped", PLUGIN_NAME)
+
+  def _thread_main(self):
+    while True:
+      self._queue_cond.acquire()
+
+      while len(self._queue) == 0:
+        self._queue_cond.wait()
+
+      if self._queue[0] is None:
+        self._queue_cond.release()
+        break
+
+      progress = None
+
+      for item in self._priority:
+        if item in self._queue:
+          self._queue.remove(item)
+          self._priority.remove(item)
+          progress = item
+          break
+
+      if not progress:
+        progress = self._queue.pop(0)
+
+      self._queue_cond.release()
+
+      size = get_total_size(progress._paths)
+      progress.percent = float(size) / (progress._total or 1) * 100
+
+      self._queue_cond.acquire()
+
+      if size > 0 and size < progress._total:
+        self._priority.append(progress)
+
+      self._queue_cond.release()
+
+  def queue_update(self, progress):
+    self._queue_cond.acquire()
+
+    if progress is None:
+      self._queue = [None]
+      self._queue_cond.notify()
+    elif progress not in self._queue:
+      self._queue.append(progress)
+      self._queue_cond.notify()
+
+    self._queue_cond.release()
+
+  def queue_remove(self, progress):
+    self._queue_cond.acquire()
+
+    if progress in self._queue:
+      self._queue.remove(progress)
+
+    if progress in self._priority:
+      self._priority.remove(progress)
+
+    self._queue_cond.release()
+
+
+class Progress(object):
 
   def __init__(self, torrent, src, dest):
     files = torrent.get_files()
 
     src_paths = (os.path.join(src, file["path"]) for file in files)
-    self._total = self._get_size(src_paths)
+    self._total = get_total_size(src_paths)
 
     self._paths = tuple(os.path.join(dest, file["path"]) for file in files)
-
-    self._lock = threading.Lock()
-    self._progress = 0.0
-
-  @property
-  def progress(self):
-    self.update()
-    return self._progress
-
-  def update(self):
-    if self._lock.acquire(False):
-      try:
-        threading.Thread(target=self._thread_update_progress).start()
-      finally:
-        self._lock.release()
-
-  def _thread_update_progress(self):
-    size = self._get_size(self._paths)
-    self._progress = float(size) / (self._total or 1) * 100
-
-  def _get_size(self, paths):
-    size = 0
-    for path in paths:
-      try:
-        size += os.path.getsize(path)
-      except OSError:
-        pass
-
-    return size
+    self.percent = 0.0
 
 
 class Core(CorePluginBase):
@@ -120,6 +178,8 @@ class Core(CorePluginBase):
     self.deferred = {}
     self.paths = {}
     self.progress = {}
+
+    self.progress_thread = ProgressThread()
 
     component.get("AlertManager").register_handler(
         "storage_moved_alert", self.on_storage_moved)
@@ -150,7 +210,7 @@ class Core(CorePluginBase):
       result = _orig_move_storage(obj, dest)
       if result:
         self.status[id] = "Moving"
-        self.progress[id] = MoveProgress(obj, old_path, dest)
+        self.progress[id] = Progress(obj, old_path, dest)
 
         if self.general["remove_empty"]:
           self.paths[id] = old_path
@@ -170,6 +230,8 @@ class Core(CorePluginBase):
 
     for id in self.deferred.keys():
       self._cancel_deferred(id)
+
+    self.progress_thread.stop()
 
     component.get("CorePluginManager").deregister_status_field(MODULE_NAME)
 
@@ -244,6 +306,9 @@ class Core(CorePluginBase):
 
       del self.paths[id]
 
+    if id in self.progress:
+      self.progress_thread.queue_remove(self.progress[id])
+
     if id in self.status:
       self._cancel_deferred(id)
       self.status[id] = "Done"
@@ -254,6 +319,9 @@ class Core(CorePluginBase):
 
     if id in self.paths:
       del self.paths[id]
+
+    if id in self.progress:
+      self.progress_thread.queue_remove(self.progress[id])
 
     if id in self.status:
       self._cancel_deferred(id)
@@ -266,9 +334,13 @@ class Core(CorePluginBase):
     status = self.status.get(id, "")
 
     if status == "Moving":
-      progress = self.progress[id].progress
-      if progress < 100.0:
-        status = "%s %.6f" % (status, progress)
+      progress = self.progress[id]
+      percent = progress.percent
+
+      if percent < 100.0:
+        status = "%s %.6f" % (status, percent)
+
+      self.progress_thread.queue_update(progress)
 
     return status
 
