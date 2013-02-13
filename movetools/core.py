@@ -97,24 +97,20 @@ class ProgressThread(object):
     while True:
       self._queue_cond.acquire()
 
-      while len(self._queue) == 0:
+      while not self._queue:
         self._queue_cond.wait()
 
-      if self._queue[0] is None:
+      progress = self._queue.pop(0)
+      if progress is None:
         self._queue_cond.release()
         break
 
-      progress = None
-
-      for item in self._priority:
-        if item in self._queue:
-          self._queue.remove(item)
-          self._priority.remove(item)
-          progress = item
-          break
-
-      if not progress:
-        progress = self._queue.pop(0)
+      if self._priority:
+        if progress in self._priority:
+          self._priority.remove(progress)
+        else:
+          self._queue_cond.release()
+          continue
 
       self._queue_cond.release()
 
