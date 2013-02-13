@@ -70,7 +70,8 @@ def get_total_size(paths):
   size = 0
   for path in paths:
     try:
-      size += os.path.getsize(path)
+      if os.path.exists(path):
+        size += os.path.getsize(path)
     except OSError:
       pass
 
