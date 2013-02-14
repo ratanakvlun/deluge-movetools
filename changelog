@@ -1,3 +1,7 @@
+Version 0.1.8
+- Run progress calculations in separate thread
+- Various fixes
+
 Version 0.1.7
 - Change column to use progress bar (adapted from Smart Move)
 - Minor fixes
