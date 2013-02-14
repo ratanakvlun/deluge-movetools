@@ -88,8 +88,6 @@ class GtkUI(GtkPluginBase):
   def disable(self):
     log.debug("[%s] Disabling GtkUI...", PLUGIN_NAME)
 
-    self._remove_column()
-
     component.get("MenuBar").torrentmenu.remove(self.sep)
     component.get("MenuBar").torrentmenu.remove(self.menu)
 
@@ -100,6 +98,8 @@ class GtkUI(GtkPluginBase):
         "on_apply_prefs", self._do_save_settings)
     component.get("PluginManager").deregister_hook(
         "on_show_prefs", self._do_load_settings)
+
+    self._remove_column()
 
     log.debug("[%s] GtkUI disabled", PLUGIN_NAME)
 
