@@ -191,21 +191,25 @@ class GtkUI(GtkPluginBase):
     cell.set_property("value", 0.0)
     cell.set_property("visible", False)
 
-    data = model[iter][data[0]]
-    if data:
+    status = model[iter][data[0]]
+    if status:
       cell.set_property("visible", True)
 
-      try:
-        value = float(data.split()[-1])
-        cell.set_property("value", value)
+      if status.startswith("Moving "):
+        try:
+          value = float(status.split()[-1])
+          cell.set_property("value", value)
 
-        cell_str = "%s %.2f%%" % (_("Moving"), value)
-        cell.set_property("text", cell_str)
-      except ValueError:
-        if data == "Done" or data == "Moving":
+          status = "%s %.2f%%" % (_("Moving"), value)
+        except ValueError:
+          status = _("Status error")
+
+        cell.set_property("text", status)
+      else:
+        if status == "Done":
           cell.set_property("value", 100.0)
 
-        cell.set_property("text", _(data))
+        cell.set_property("text", _(status))
 
   def _remove_column(self):
     component.get("TorrentView").remove_column(COLUMN_NAME)

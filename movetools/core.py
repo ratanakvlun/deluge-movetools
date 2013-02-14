@@ -335,7 +335,11 @@ class Core(CorePluginBase):
       percent = progress.percent
 
       if percent < 100.0:
-        status = "%s %.6f" % (status, percent)
+        percent_str = ("%.6f" % percent)[:-4]
+      else:
+        percent_str = "99.99"
+
+      status = "Moving %s" % percent_str
 
       self.progress_thread.queue_update(progress)
 
