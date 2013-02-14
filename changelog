@@ -1,3 +1,6 @@
+Version 0.1.8.1
+- Deinit column last due to bug in Deluge column removal
+
 Version 0.1.8
 - Run progress calculations in separate thread
 - Various fixes
