@@ -55,6 +55,8 @@ from common import PLUGIN_NAME
 from common import MODULE_NAME
 
 
+CONFIG_FILE = "%s.conf" % MODULE_NAME
+
 DEFAULT_PREFS = {
   "general": {
     "remove_empty": False,
@@ -166,7 +168,7 @@ class Core(CorePluginBase):
   def enable(self):
     log.debug("[%s] Enabling Core...", PLUGIN_NAME)
     self.config = deluge.configmanager.ConfigManager(
-        "%s.conf" % MODULE_NAME, DEFAULT_PREFS)
+        CONFIG_FILE, DEFAULT_PREFS)
 
     self.general = self.config["general"]
     self.timeout = self.config["timeout"]
@@ -237,7 +239,7 @@ class Core(CorePluginBase):
     component.get("AlertManager").deregister_handler(
         self.on_storage_moved_failed)
 
-    deluge.configmanager.close(self.config)
+    deluge.configmanager.close(CONFIG_FILE)
 
     self._rpc_deregister(PLUGIN_NAME)
     log.debug("[%s] Core disabled", PLUGIN_NAME)
