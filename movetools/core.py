@@ -41,6 +41,7 @@
 import os
 import os.path
 import threading
+import copy
 
 from twisted.internet import reactor
 
@@ -168,7 +169,7 @@ class Core(CorePluginBase):
   def enable(self):
     log.debug("[%s] Enabling Core...", PLUGIN_NAME)
     self.config = deluge.configmanager.ConfigManager(
-        CONFIG_FILE, DEFAULT_PREFS)
+        CONFIG_FILE, copy.deepcopy(DEFAULT_PREFS))
 
     self.general = self.config["general"]
     self.timeout = self.config["timeout"]
