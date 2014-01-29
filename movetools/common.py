@@ -44,7 +44,7 @@ import pkg_resources
 
 PLUGIN_NAME = "MoveTools"
 MODULE_NAME = "movetools"
-DISPLAY_NAME = _("Move Tools")
+DISPLAY_NAME = _("MoveTools")
 
 
 def get_resource(filename):

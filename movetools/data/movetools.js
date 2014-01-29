@@ -34,7 +34,7 @@ Copyright:
 
 PLUGIN_NAME = 'MoveTools';
 MODULE_NAME = 'movetools';
-DISPLAY_NAME = _('Move Tools');
+DISPLAY_NAME = _('MoveTools');
 
 COLUMN_NAME = _('Move Status');
 
