@@ -3,7 +3,7 @@ Script: movetools.js
     The client-side javascript code for the MoveTools plugin.
 
 Copyright:
-    (C) Ratanak Lun 2013 <ratanakvlun@gmail.com>
+    (C) Ratanak Lun 2014 <ratanakvlun@gmail.com>
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 3, or (at your option)
