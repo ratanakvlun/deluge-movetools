@@ -175,7 +175,7 @@ class Core(CorePluginBase):
     self.timeout = self.config["timeout"]
 
     self.status = {}
-    self.deferred = {}
+    self.clear_calls = {}
     self.paths = {}
     self.progress = {}
 
@@ -198,7 +198,7 @@ class Core(CorePluginBase):
         log.debug("[%s] Unable to move torrent: already moving", PLUGIN_NAME)
         return False
 
-      self._cancel_deferred(id)
+      self._cancel_clear(id)
 
       old_path = obj.get_status(["save_path"])["save_path"]
       if old_path == dest:
@@ -228,8 +228,8 @@ class Core(CorePluginBase):
     log.debug("[%s] Disabling Core...", PLUGIN_NAME)
     Torrent.move_storage = self.orig_move_storage
 
-    for id in self.deferred.keys():
-      self._cancel_deferred(id)
+    for id in self.clear_calls.keys():
+      self._cancel_clear(id)
 
     self.progress_thread.stop()
 
@@ -265,7 +265,7 @@ class Core(CorePluginBase):
     log.debug("[%s] Clearing status results for: %s", PLUGIN_NAME, ids)
     for id in ids:
       if id in self.status and self.status[id] != "Moving":
-        self._cancel_deferred(id)
+        self._cancel_clear(id)
         self._clear_move_status(id)
 
   @export
@@ -273,7 +273,7 @@ class Core(CorePluginBase):
     log.debug("[%s] Clearing all status results", PLUGIN_NAME)
     for id in self.status.keys():
       if self.status[id] != "Moving":
-        self._cancel_deferred(id)
+        self._cancel_clear(id)
         self._clear_move_status(id)
 
   @export
@@ -286,7 +286,7 @@ class Core(CorePluginBase):
         if torrent.handle.is_finished():
           dest = torrent.options["move_completed_path"]
           if not dest:
-            self._cancel_deferred(id)
+            self._cancel_clear(id)
             self.status[id] = "%s: %s" % ("Error", "Pathname is empty")
             self._clear_move_status(id, self.timeout["error"])
           elif not torrent.move_storage(dest):
@@ -310,7 +310,7 @@ class Core(CorePluginBase):
       self.progress_thread.queue_remove(self.progress[id])
 
     if id in self.status:
-      self._cancel_deferred(id)
+      self._cancel_clear(id)
       self.status[id] = "Done"
       self._clear_move_status(id, self.timeout["success"])
 
@@ -324,7 +324,7 @@ class Core(CorePluginBase):
       self.progress_thread.queue_remove(self.progress[id])
 
     if id in self.status:
-      self._cancel_deferred(id)
+      self._cancel_clear(id)
       message = alert.message().rpartition(":")[2].strip()
       self.status[id] = "%s: %s" % ("Error", message)
       self._clear_move_status(id, self.timeout["error"])
@@ -350,22 +350,22 @@ class Core(CorePluginBase):
 
   def _clear_move_status(self, id, secs=0):
     if secs > 0:
-      self._cancel_deferred(id)
-      self.deferred[id] = reactor.callLater(secs, self._clear_move_status, id)
+      self._cancel_clear(id)
+      self.clear_calls[id] = reactor.callLater(secs, self._clear_move_status, id)
     elif secs == 0:
       if id in self.status:
-        if id in self.deferred:
-          del self.deferred[id]
+        self._cancel_clear(id)
 
         if id in self.progress:
           del self.progress[id]
 
         del self.status[id]
 
-  def _cancel_deferred(self, id):
-    if id in self.deferred:
-      self.deferred[id].cancel()
-      del self.deferred[id]
+  def _cancel_clear(self, id):
+    if id in self.clear_calls:
+      if self.clear_calls[id].active():
+        self.clear_calls[id].cancel()
+      del self.clear_calls[id]
 
   def _rpc_deregister(self, name):
     server = component.get("RPCServer")
