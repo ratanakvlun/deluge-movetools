@@ -249,7 +249,7 @@ class Core(CorePluginBase):
 
     deluge.configmanager.close(CONFIG_FILE)
 
-    #self._rpc_deregister(PLUGIN_NAME)
+    self._rpc_deregister(PLUGIN_NAME)
 
     log.debug("[%s] Core disabled", PLUGIN_NAME)
 
