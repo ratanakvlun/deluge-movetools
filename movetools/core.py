@@ -176,7 +176,7 @@ class Core(CorePluginBase):
 
     self.status = {}
     self.clear_calls = {}
-    self.paths = {}
+    self.old_paths = {}
     self.progress = {}
 
     self.progress_thread = ProgressThread()
@@ -213,7 +213,7 @@ class Core(CorePluginBase):
         self.progress[id] = Progress(obj, old_path, dest)
 
         if self.general["remove_empty"]:
-          self.paths[id] = old_path
+          self.old_paths[id] = old_path
       else:
         self.status[id] = "%s: %s" % ("Error", "General failure")
         self._clear_move_status(id, self.timeout["error"])
@@ -295,16 +295,16 @@ class Core(CorePluginBase):
   def on_storage_moved(self, alert):
     id = str(alert.handle.info_hash())
 
-    if id in self.paths:
+    if id in self.old_paths:
       if self.general["remove_empty"]:
         try:
           log.debug("[%s] Removing empty folders in path: %s",
-              PLUGIN_NAME, self.paths[id])
-          os.removedirs(self.paths[id])
+              PLUGIN_NAME, self.old_paths[id])
+          os.removedirs(self.old_paths[id])
         except OSError as e:
           pass
 
-      del self.paths[id]
+      del self.old_paths[id]
 
     if id in self.progress:
       self.progress_thread.queue_remove(self.progress[id])
@@ -317,8 +317,8 @@ class Core(CorePluginBase):
   def on_storage_moved_failed(self, alert):
     id = str(alert.handle.info_hash())
 
-    if id in self.paths:
-      del self.paths[id]
+    if id in self.old_paths:
+      del self.old_paths[id]
 
     if id in self.progress:
       self.progress_thread.queue_remove(self.progress[id])
