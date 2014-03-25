@@ -263,7 +263,6 @@ class Core(CorePluginBase):
     log.debug("[%s] Clearing status results for: %s", PLUGIN_NAME, ids)
     for id in ids:
       if id in self.status and self.status[id] != "Moving":
-        self._cancel_clear(id)
         self._clear_move_status(id)
 
   @export
@@ -271,7 +270,6 @@ class Core(CorePluginBase):
     log.debug("[%s] Clearing all status results", PLUGIN_NAME)
     for id in self.status.keys():
       if self.status[id] != "Moving":
-        self._cancel_clear(id)
         self._clear_move_status(id)
 
   @export
@@ -293,6 +291,11 @@ class Core(CorePluginBase):
   def on_storage_moved(self, alert):
     id = str(alert.handle.info_hash())
 
+    if id in self.status:
+      self._cancel_clear(id)
+      self.status[id] = "Done"
+      self._clear_move_status(id, self.timeout["success"])
+
     if id in self.old_paths:
       if self.general["remove_empty"]:
         try:
@@ -307,16 +310,8 @@ class Core(CorePluginBase):
     if id in self.progress:
       del self.progress[id]
 
-    if id in self.status:
-      self._cancel_clear(id)
-      self.status[id] = "Done"
-      self._clear_move_status(id, self.timeout["success"])
-
   def on_storage_moved_failed(self, alert):
     id = str(alert.handle.info_hash())
-
-    if id in self.old_paths:
-      del self.old_paths[id]
 
     if id in self.status:
       self._cancel_clear(id)
@@ -325,6 +320,9 @@ class Core(CorePluginBase):
       self._clear_move_status(id, self.timeout["error"])
       log.debug("[%s] Error: %s", PLUGIN_NAME, message)
 
+    if id in self.old_paths:
+      del self.old_paths[id]
+
     if id in self.progress:
       del self.progress[id]
 
@@ -332,8 +330,7 @@ class Core(CorePluginBase):
     status = self.status.get(id, "")
 
     if status == "Moving":
-      progress = self.progress[id]
-      percent = progress.percent
+      percent = self.progress[id].percent
 
       if percent < 100.0:
         percent_str = ("%.6f" % percent)[:-4]
@@ -344,18 +341,22 @@ class Core(CorePluginBase):
 
     return status
 
+  def _new_clear_call(self, id, secs):
+
+    self._cancel_clear(id)
+    self.clear_calls[id] = reactor.callLater(secs, self._clear_move_status, id)
+
   def _clear_move_status(self, id, secs=0):
     if secs > 0:
-      self._cancel_clear(id)
-      self.clear_calls[id] = reactor.callLater(secs, self._clear_move_status, id)
+      self._new_clear_call(id, secs)
     elif secs == 0:
+      self._cancel_clear(id)
+
       if id in self.status:
-        self._cancel_clear(id)
-
-        if id in self.progress:
-          del self.progress[id]
-
         del self.status[id]
+
+      if id in self.progress:
+        del self.progress[id]
 
   def _cancel_clear(self, id):
     if id in self.clear_calls:
