@@ -168,6 +168,9 @@ class Core(CorePluginBase):
 
   def enable(self):
     log.debug("[%s] Enabling Core...", PLUGIN_NAME)
+
+    self.initialized = False
+
     self.config = deluge.configmanager.ConfigManager(
         CONFIG_FILE, copy.deepcopy(DEFAULT_PREFS))
 
@@ -220,12 +223,18 @@ class Core(CorePluginBase):
 
     self.orig_move_storage = Torrent.move_storage
     Torrent.move_storage = wrapper
+
+    self.initialized = True
+
     log.debug("[%s] Core enabled", PLUGIN_NAME)
 
     #TODO: LAUNCH UPDATE LOOP
 
   def disable(self):
     log.debug("[%s] Disabling Core...", PLUGIN_NAME)
+
+    self.initialized = False
+
     Torrent.move_storage = self.orig_move_storage
 
     for id in self.clear_calls.keys():
