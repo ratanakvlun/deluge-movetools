@@ -179,8 +179,6 @@ class Core(CorePluginBase):
     self.old_paths = {}
     self.progress = {}
 
-    self.progress_thread = ProgressThread()
-
     component.get("AlertManager").register_handler(
         "storage_moved_alert", self.on_storage_moved)
     component.get("AlertManager").register_handler(
@@ -224,14 +222,14 @@ class Core(CorePluginBase):
     Torrent.move_storage = wrapper
     log.debug("[%s] Core enabled", PLUGIN_NAME)
 
+    #TODO: LAUNCH UPDATE LOOP
+
   def disable(self):
     log.debug("[%s] Disabling Core...", PLUGIN_NAME)
     Torrent.move_storage = self.orig_move_storage
 
     for id in self.clear_calls.keys():
       self._cancel_clear(id)
-
-    self.progress_thread.stop()
 
     component.get("CorePluginManager").deregister_status_field(MODULE_NAME)
 
@@ -307,7 +305,7 @@ class Core(CorePluginBase):
       del self.old_paths[id]
 
     if id in self.progress:
-      self.progress_thread.queue_remove(self.progress[id])
+      del self.progress[id]
 
     if id in self.status:
       self._cancel_clear(id)
@@ -320,15 +318,15 @@ class Core(CorePluginBase):
     if id in self.old_paths:
       del self.old_paths[id]
 
-    if id in self.progress:
-      self.progress_thread.queue_remove(self.progress[id])
-
     if id in self.status:
       self._cancel_clear(id)
       message = alert.message().rpartition(":")[2].strip()
       self.status[id] = "%s: %s" % ("Error", message)
       self._clear_move_status(id, self.timeout["error"])
       log.debug("[%s] Error: %s", PLUGIN_NAME, message)
+
+    if id in self.progress:
+      del self.progress[id]
 
   def _get_move_status(self, id):
     status = self.status.get(id, "")
@@ -343,8 +341,6 @@ class Core(CorePluginBase):
         percent_str = "99.99"
 
       status = "Moving %s" % percent_str
-
-      self.progress_thread.queue_update(progress)
 
     return status
 
