@@ -228,7 +228,7 @@ class Core(CorePluginBase):
 
     log.debug("[%s] Core enabled", PLUGIN_NAME)
 
-    #TODO: LAUNCH UPDATE LOOP
+    self._update_loop()
 
   def disable(self):
     log.debug("[%s] Disabling Core...", PLUGIN_NAME)
@@ -252,6 +252,18 @@ class Core(CorePluginBase):
     #self._rpc_deregister(PLUGIN_NAME)
 
     log.debug("[%s] Core disabled", PLUGIN_NAME)
+
+  def _update_loop(self):
+
+    if not self.initialized:
+      return
+
+    for id in self.progress:
+      progress = self.progress[id]
+      size = get_total_size(progress._paths)
+      progress.percent = float(size) / (progress._total or 1) * 100
+
+    reactor.callLater(1.0, self._update_loop)
 
   @export
   def set_settings(self, options):
