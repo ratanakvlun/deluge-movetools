@@ -175,6 +175,8 @@ class Core(CorePluginBase):
     component.get("CorePluginManager").register_status_field(STATUS_MESSAGE,
       self.get_move_message)
 
+    component.get("FilterManager").register_tree_field(STATUS_NAME)
+
     self.orig_move_storage = Torrent.move_storage
     Torrent.move_storage = move_storage
 
@@ -193,6 +195,8 @@ class Core(CorePluginBase):
 
     for id in self.torrents:
       self._cancel_remove(id)
+
+    component.get("FilterManager").deregister_tree_field(STATUS_NAME)
 
     component.get("CorePluginManager").deregister_status_field(STATUS_MESSAGE)
     component.get("CorePluginManager").deregister_status_field(STATUS_NAME)
