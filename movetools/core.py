@@ -40,8 +40,8 @@
 
 import os
 import os.path
-import threading
 import copy
+import logging
 
 from twisted.internet import reactor
 
@@ -50,7 +50,6 @@ import deluge.component as component
 import deluge.configmanager
 from deluge.core.rpcserver import export
 from deluge.core.torrent import Torrent
-from deluge.log import LOG as log
 
 from common import PLUGIN_NAME
 from common import MODULE_NAME
@@ -68,6 +67,7 @@ DEFAULT_PREFS = {
   },
 }
 
+log = logging.getLogger(__name__)
 
 def get_total_size(paths):
   size = 0
@@ -79,77 +79,6 @@ def get_total_size(paths):
       pass
 
   return size
-
-
-class ProgressThread(object):
-
-  def __init__(self):
-    self._queue = []
-    self._priority = []
-    self._queue_cond = threading.Condition()
-
-    self._thread = threading.Thread(target=self._thread_main)
-    self._thread.start()
-    log.debug("[%s] Progress processing thread started", PLUGIN_NAME)
-
-  def stop(self):
-    self.queue_update(None)
-    self._thread.join()
-    log.debug("[%s] Progress processing thread stopped", PLUGIN_NAME)
-
-  def _thread_main(self):
-    while True:
-      self._queue_cond.acquire()
-
-      while not self._queue:
-        self._queue_cond.wait()
-
-      progress = self._queue.pop(0)
-      if progress is None:
-        self._queue_cond.release()
-        break
-
-      if self._priority:
-        if progress in self._priority:
-          self._priority.remove(progress)
-        else:
-          self._queue_cond.release()
-          continue
-
-      self._queue_cond.release()
-
-      size = get_total_size(progress._paths)
-      progress.percent = float(size) / (progress._total or 1) * 100
-
-      self._queue_cond.acquire()
-
-      if size > 0 and size < progress._total:
-        self._priority.append(progress)
-
-      self._queue_cond.release()
-
-  def queue_update(self, progress):
-    self._queue_cond.acquire()
-
-    if progress is None:
-      self._queue = [None]
-      self._queue_cond.notify()
-    elif progress not in self._queue:
-      self._queue.append(progress)
-      self._queue_cond.notify()
-
-    self._queue_cond.release()
-
-  def queue_remove(self, progress):
-    self._queue_cond.acquire()
-
-    if progress in self._queue:
-      self._queue.remove(progress)
-
-    if progress in self._priority:
-      self._priority.remove(progress)
-
-    self._queue_cond.release()
 
 
 class Progress(object):
@@ -164,70 +93,70 @@ class Progress(object):
     self.percent = 0.0
 
   def update(self):
-
     size = get_total_size(self._paths)
     self.percent = float(size) / (self._total or 1) * 100
+
+
+class TorrentMoveJob(object):
+
+  def __init__(self, torrent, dest_path):
+    self.torrent = torrent
+    self.status = "Moving"
+    self.src_path = torrent.get_status(["save_path"])["save_path"]
+    self.dest_path = dest_path
+    self.progress = Progress(torrent, self.src_path, self.dest_path)
 
 
 class Core(CorePluginBase):
 
   def enable(self):
+
+    def move_storage(torrent, dest_path):
+      id = str(torrent.handle.info_hash())
+      log.debug("[%s] Move storage on: %s", PLUGIN_NAME, id)
+
+      if id in self.torrents:
+        if self.torrents[id].status == "Moving":
+          log.debug("[%s] Unable to move torrent: already moving", PLUGIN_NAME)
+          return False
+        else:
+          self._remove_job(id)
+
+      self.torrents[id] = TorrentMoveJob(torrent, dest_path)
+
+      if self.torrents[id].src_path == dest_path:
+        self.torrents[id].status = "%s: %s" % ("Error", "Same path")
+        self._schedule_remove(id, self.timeout["error"])
+        return False
+
+      self.queue.append(id)
+      return True
+
     log.debug("[%s] Enabling Core...", PLUGIN_NAME)
 
     self.initialized = False
 
-    self.config = deluge.configmanager.ConfigManager(
-        CONFIG_FILE, copy.deepcopy(DEFAULT_PREFS))
+    self.config = deluge.configmanager.ConfigManager(CONFIG_FILE,
+      copy.deepcopy(DEFAULT_PREFS))
 
     self.general = self.config["general"]
     self.timeout = self.config["timeout"]
 
-    self.status = {}
-    self.clear_calls = {}
-    self.old_paths = {}
-    self.progress = {}
+    self.torrents = {}
+    self.calls = {}
+    self.queue = []
+    self.active = None
 
+    component.get("AlertManager").register_handler("storage_moved_alert",
+      self.on_storage_moved)
     component.get("AlertManager").register_handler(
-        "storage_moved_alert", self.on_storage_moved)
-    component.get("AlertManager").register_handler(
-        "storage_moved_failed_alert", self.on_storage_moved_failed)
+      "storage_moved_failed_alert", self.on_storage_moved_failed)
 
-    component.get("CorePluginManager").register_status_field(
-        MODULE_NAME, self._get_move_status)
-
-    def wrapper(torrent, dest):
-      id = str(torrent.handle.info_hash())
-      log.debug("[%s] (Wrapped) Move storage on: %s", PLUGIN_NAME, id)
-
-      status = self.status.get(id, None)
-      if status == "Moving":
-        log.debug("[%s] Unable to move torrent: already moving", PLUGIN_NAME)
-        return False
-
-      self._cancel_clear(id)
-
-      old_path = torrent.get_status(["save_path"])["save_path"]
-      if old_path == dest:
-        self.status[id] = "%s: %s" % ("Error", "Same path")
-        self._clear_move_status(id, self.timeout["error"])
-        return False
-
-      _orig_move_storage = self.orig_move_storage
-      result = _orig_move_storage(torrent, dest)
-      if result:
-        self.status[id] = "Moving"
-        self.progress[id] = Progress(torrent, old_path, dest)
-
-        if self.general["remove_empty"]:
-          self.old_paths[id] = old_path
-      else:
-        self.status[id] = "%s: %s" % ("Error", "General failure")
-        self._clear_move_status(id, self.timeout["error"])
-
-      return result
+    component.get("CorePluginManager").register_status_field(MODULE_NAME,
+      self.get_move_status)
 
     self.orig_move_storage = Torrent.move_storage
-    Torrent.move_storage = wrapper
+    Torrent.move_storage = move_storage
 
     self.initialized = True
 
@@ -242,8 +171,8 @@ class Core(CorePluginBase):
 
     Torrent.move_storage = self.orig_move_storage
 
-    for id in self.clear_calls.keys():
-      self._cancel_clear(id)
+    for id in self.torrents:
+      self._cancel_remove(id)
 
     component.get("CorePluginManager").deregister_status_field(MODULE_NAME)
 
@@ -257,18 +186,6 @@ class Core(CorePluginBase):
     self._rpc_deregister(PLUGIN_NAME)
 
     log.debug("[%s] Core disabled", PLUGIN_NAME)
-
-  def _update_loop(self):
-
-    if not self.initialized:
-      return
-
-    for id in self.progress:
-      progress = self.progress[id]
-      size = get_total_size(progress._paths)
-      progress.percent = float(size) / (progress._total or 1) * 100
-
-    reactor.callLater(1.0, self._update_loop)
 
   @export
   def set_settings(self, options):
@@ -289,15 +206,15 @@ class Core(CorePluginBase):
   def clear_selected(self, ids):
     log.debug("[%s] Clearing status results for: %s", PLUGIN_NAME, ids)
     for id in ids:
-      if id in self.status and self.status[id] != "Moving":
-        self._clear_move_status(id)
+      if id in self.torrents and self.torrents[id].status != "Moving":
+        self._remove_job(id)
 
   @export
   def clear_all_status(self):
     log.debug("[%s] Clearing all status results", PLUGIN_NAME)
-    for id in self.status.keys():
-      if self.status[id] != "Moving":
-        self._clear_move_status(id)
+    for id in self.torrents.keys():
+      if self.torrents[id].status != "Moving":
+        self._remove_job(id)
 
   @export
   def move_completed(self, ids):
@@ -307,60 +224,46 @@ class Core(CorePluginBase):
       if id in torrents:
         torrent = torrents[id]
         if torrent.handle.is_finished():
-          dest = torrent.options["move_completed_path"]
-          if not dest:
-            self._cancel_clear(id)
-            self.status[id] = "%s: %s" % ("Error", "Pathname is empty")
-            self._clear_move_status(id, self.timeout["error"])
-          elif not torrent.move_storage(dest):
-            log.error("[%s] Could not move storage: %s", PLUGIN_NAME, id)
+          dest_path = torrent.options["move_completed_path"]
+          if not dest_path or not torrent.move_storage(dest_path):
+            log.error("[%s] Could not move storage: General failure: %s",
+              PLUGIN_NAME, id)
 
   def on_storage_moved(self, alert):
     id = str(alert.handle.info_hash())
+    if id in self.torrents:
+      self.active = None
+      self.torrents[id].status = "Done"
+      self._schedule_remove(id, self.timeout["success"])
 
-    if id in self.status:
-      self._cancel_clear(id)
-      self.status[id] = "Done"
-      self._clear_move_status(id, self.timeout["success"])
-
-    if id in self.old_paths:
       if self.general["remove_empty"]:
         try:
-          log.debug("[%s] Removing empty folders in path: %s",
-              PLUGIN_NAME, self.old_paths[id])
-          os.removedirs(self.old_paths[id])
-        except OSError as e:
+          log.debug("[%s] Removing empty folders in path: %s", PLUGIN_NAME,
+            self.torrents[id].src_path)
+          os.removedirs(self.torrents[id].src_path)
+        except OSError:
           pass
-
-      del self.old_paths[id]
-
-    if id in self.progress:
-      del self.progress[id]
 
   def on_storage_moved_failed(self, alert):
     id = str(alert.handle.info_hash())
-
-    if id in self.status:
-      self._cancel_clear(id)
+    if id in self.torrents:
+      self.active = None
       message = alert.message().rpartition(":")[2].strip()
-      self.status[id] = "%s: %s" % ("Error", message)
-      self._clear_move_status(id, self.timeout["error"])
       log.debug("[%s] Error: %s", PLUGIN_NAME, message)
 
-    if id in self.old_paths:
-      del self.old_paths[id]
+      self.torrents[id].status = "%s: %s" % ("Error", message)
+      self._schedule_remove(id, self.timeout["error"])
 
-    if id in self.progress:
-      del self.progress[id]
+  def get_move_status(self, id):
+    if id not in self.torrents:
+      return ""
 
-  def _get_move_status(self, id):
-    status = self.status.get(id, "")
+    status = self.torrents[id].status
 
     if status == "Moving":
-      percent = self.progress[id].percent
-
+      percent = self.torrents[id].progress.percent
       if percent < 100.0:
-        percent_str = ("%.6f" % percent)[:-4]
+        percent_str = "%.2f" % percent
       else:
         percent_str = "99.99"
 
@@ -368,28 +271,50 @@ class Core(CorePluginBase):
 
     return status
 
-  def _new_clear_call(self, id, secs):
+  def _update_loop(self):
 
-    self._cancel_clear(id)
-    self.clear_calls[id] = reactor.callLater(secs, self._clear_move_status, id)
+    if not self.initialized:
+      return
 
-  def _clear_move_status(self, id, secs=0):
-    if secs > 0:
-      self._new_clear_call(id, secs)
-    elif secs == 0:
-      self._cancel_clear(id)
+    if self.active is None:
+      while self.queue:
+        id = self.queue.pop(0)
+        if id in self.torrents:
+          job = self.torrents[id]
+          if self.orig_move_storage(job.torrent, job.dest_path):
+            self.active = id
+            break
 
-      if id in self.status:
-        del self.status[id]
+          self.torrents[self.active].status = "%s: %s" % ("Error",
+            "General failure")
+          self._schedule_remove(self.active, self.timeout["error"])
 
-      if id in self.progress:
-        del self.progress[id]
+        self.active = None
 
-  def _cancel_clear(self, id):
-    if id in self.clear_calls:
-      if self.clear_calls[id].active():
-        self.clear_calls[id].cancel()
-      del self.clear_calls[id]
+    if self.active:
+      self.torrents[self.active].progress.update()
+
+    reactor.callLater(1.0, self._update_loop)
+
+  def _remove_job(self, id):
+    self._cancel_remove(id)
+
+    if id in self.queue:
+      self.queue.remove(id)
+
+    if id in self.torrents:
+      del self.torrents[id]
+
+  def _schedule_remove(self, id, time):
+    self._cancel_remove(id)
+    if time >= 0:
+      self.calls[id] = reactor.callLater(time, self._remove_job, id)
+
+  def _cancel_remove(self, id):
+    if id in self.calls:
+      if self.calls[id].active():
+        self.calls[id].cancel()
+      del self.calls[id]
 
   def _rpc_deregister(self, name):
     server = component.get("RPCServer")
