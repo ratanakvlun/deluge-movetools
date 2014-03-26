@@ -113,7 +113,7 @@ class Core(CorePluginBase):
 
     def move_storage(torrent, dest_path):
       id = str(torrent.handle.info_hash())
-      log.debug("[%s] Move storage on: %s", PLUGIN_NAME, id)
+      log.debug("[%s] Moving (%s)", PLUGIN_NAME, id)
 
       if id in self.torrents:
         if self.torrents[id].status == "Moving":
@@ -232,7 +232,7 @@ class Core(CorePluginBase):
 
   @export
   def cancel_pending(self, ids):
-    log.debug("[%s] Canceling pending moves for: %s", PLUGIN_NAME, ids)
+    log.debug("[%s] Canceling pending move for: %s", PLUGIN_NAME, ids)
     for id in ids:
       if id in self.torrents and self.torrents[id].status == "Moving":
         if id != self.active:
