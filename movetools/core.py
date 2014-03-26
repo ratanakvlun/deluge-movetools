@@ -125,13 +125,11 @@ class Core(CorePluginBase):
       self.torrents[id] = TorrentMoveJob(torrent, dest_path)
 
       if not dest_path:
-        self.torrents[id].status = "%s: %s" % ("Error", "Empty path")
-        self._schedule_remove(id, self.timeout["error"])
+        self._report_result(id, "error", "Error", "Empty path")
         return False
 
       if self.torrents[id].src_path == dest_path:
-        self.torrents[id].status = "%s: %s" % ("Error", "Same path")
-        self._schedule_remove(id, self.timeout["error"])
+        self._report_result(id, "error", "Error", "Same path")
         return False
 
       self.queue.append(id)
@@ -244,8 +242,7 @@ class Core(CorePluginBase):
     id = str(alert.handle.info_hash())
     if id in self.torrents:
       self.active = None
-      self.torrents[id].status = "Done"
-      self._schedule_remove(id, self.timeout["success"])
+      self._report_result(id, "success", "Done")
 
       if self.general["remove_empty"]:
         try:
@@ -260,10 +257,7 @@ class Core(CorePluginBase):
     if id in self.torrents:
       self.active = None
       message = alert.message().rpartition(":")[2].strip()
-      log.debug("[%s] Error: %s", PLUGIN_NAME, message)
-
-      self.torrents[id].status = "%s: %s" % ("Error", message)
-      self._schedule_remove(id, self.timeout["error"])
+      self._report_result(id, "error", "Error", message)
 
   def get_move_status(self, id):
     if id not in self.torrents:
@@ -296,9 +290,7 @@ class Core(CorePluginBase):
             self.active = id
             break
 
-          self.torrents[self.active].status = "%s: %s" % ("Error",
-            "General failure")
-          self._schedule_remove(self.active, self.timeout["error"])
+          self._report_result(id, "error", "Error", "General failure")
 
         self.active = None
 
@@ -307,16 +299,14 @@ class Core(CorePluginBase):
 
     reactor.callLater(1.0, self._update_loop)
 
-  def _report_result(self, id, type, message=""):
+  def _report_result(self, id, type, status, message=""):
     if id in self.torrents:
       if message:
-        status = "%s: %s" % (type, message)
-      else:
-        status = type
+        status = "%s: %s" % (status, message)
 
-      log.debug("[%s] Result for %s: %s", PLUGIN_NAME, id, status)
+      log.debug("[%s] Status (%s): %s", PLUGIN_NAME, id, status)
       self.torrents[id].status = status
-      self._schedule_remove(id, self.timeout.get(type.lower(), 0))
+      self._schedule_remove(id, self.timeout.get(type, 0))
 
   def _remove_job(self, id):
     self._cancel_remove(id)
