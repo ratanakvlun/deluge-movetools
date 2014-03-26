@@ -38,6 +38,8 @@
 #
 
 
+import logging
+
 import gtk
 import gtk.glade
 
@@ -46,7 +48,6 @@ from twisted.internet import reactor
 from deluge.ui.client import client
 from deluge.plugins.pluginbase import GtkPluginBase
 import deluge.component as component
-from deluge.log import LOG as log
 
 from common import PLUGIN_NAME
 from common import MODULE_NAME
@@ -55,6 +56,8 @@ from common import get_resource
 
 
 COLUMN_NAME = _("Move Status")
+
+log = logging.getLogger(__name__)
 
 
 class GtkUI(GtkPluginBase):
