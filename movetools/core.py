@@ -67,6 +67,8 @@ DEFAULT_PREFS = {
   },
 }
 
+ALIVE_STATUS = ("Moving", "Queued")
+
 log = logging.getLogger(__name__)
 
 def get_total_size(paths):
@@ -101,7 +103,7 @@ class TorrentMoveJob(object):
 
   def __init__(self, torrent, dest_path):
     self.torrent = torrent
-    self.status = "Moving"
+    self.status = "Queued"
     self.src_path = torrent.get_status(["save_path"])["save_path"]
     self.dest_path = dest_path
     self.progress = Progress(torrent, self.src_path, self.dest_path)
@@ -116,7 +118,7 @@ class Core(CorePluginBase):
       log.debug("[%s] Moving (%s)", PLUGIN_NAME, id)
 
       if id in self.torrents:
-        if self.torrents[id].status == "Moving":
+        if self.torrents[id].status in ALIVE_STATUS:
           log.debug("[%s] Unable to move torrent: already moving", PLUGIN_NAME)
           return False
         else:
@@ -209,14 +211,14 @@ class Core(CorePluginBase):
   def clear_selected(self, ids):
     log.debug("[%s] Clearing status results for: %s", PLUGIN_NAME, ids)
     for id in ids:
-      if id in self.torrents and self.torrents[id].status != "Moving":
+      if id in self.torrents and self.torrents[id].status not in ALIVE_STATUS:
         self._remove_job(id)
 
   @export
   def clear_all_status(self):
     log.debug("[%s] Clearing all status results", PLUGIN_NAME)
     for id in self.torrents.keys():
-      if self.torrents[id].status != "Moving":
+      if self.torrents[id].status not in ALIVE_STATUS:
         self._remove_job(id)
 
   @export
@@ -234,9 +236,8 @@ class Core(CorePluginBase):
   def cancel_pending(self, ids):
     log.debug("[%s] Canceling pending move for: %s", PLUGIN_NAME, ids)
     for id in ids:
-      if id in self.torrents and self.torrents[id].status == "Moving":
-        if id != self.active:
-          self._remove_job(id)
+      if id in self.torrents and self.torrents[id].status == "Queued":
+        self._remove_job(id)
 
   def on_storage_moved(self, alert):
     id = str(alert.handle.info_hash())
@@ -287,6 +288,7 @@ class Core(CorePluginBase):
         if id in self.torrents:
           job = self.torrents[id]
           if self.orig_move_storage(job.torrent, job.dest_path):
+            job.status = "Moving"
             self.active = id
             break
 
