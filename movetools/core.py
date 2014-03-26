@@ -229,6 +229,14 @@ class Core(CorePluginBase):
             log.error("[%s] Could not move storage: General failure: %s",
               PLUGIN_NAME, id)
 
+  @export
+  def cancel_pending(self, ids):
+    log.debug("[%s] Canceling pending moves for: %s", PLUGIN_NAME, ids)
+    for id in ids:
+      if id in self.torrents and self.torrents[id].status == "Moving":
+        if id != self.active:
+          self._remove_job(id)
+
   def on_storage_moved(self, alert):
     id = str(alert.handle.info_hash())
     if id in self.torrents:
