@@ -307,6 +307,17 @@ class Core(CorePluginBase):
 
     reactor.callLater(1.0, self._update_loop)
 
+  def _report_result(self, id, type, message=""):
+    if id in self.torrents:
+      if message:
+        status = "%s: %s" % (type, message)
+      else:
+        status = type
+
+      log.debug("[%s] Result for %s: %s", PLUGIN_NAME, id, status)
+      self.torrents[id].status = status
+      self._schedule_remove(id, self.timeout.get(type.lower(), 0))
+
   def _remove_job(self, id):
     self._cancel_remove(id)
 
