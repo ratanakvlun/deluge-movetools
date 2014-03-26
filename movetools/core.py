@@ -124,6 +124,11 @@ class Core(CorePluginBase):
 
       self.torrents[id] = TorrentMoveJob(torrent, dest_path)
 
+      if not dest_path:
+        self.torrents[id].status = "%s: %s" % ("Error", "Empty path")
+        self._schedule_remove(id, self.timeout["error"])
+        return False
+
       if self.torrents[id].src_path == dest_path:
         self.torrents[id].status = "%s: %s" % ("Error", "Same path")
         self._schedule_remove(id, self.timeout["error"])
@@ -225,9 +230,7 @@ class Core(CorePluginBase):
         torrent = torrents[id]
         if torrent.handle.is_finished():
           dest_path = torrent.options["move_completed_path"]
-          if not dest_path or not torrent.move_storage(dest_path):
-            log.error("[%s] Could not move storage: General failure: %s",
-              PLUGIN_NAME, id)
+          torrent.move_storage(dest_path)
 
   @export
   def cancel_pending(self, ids):
