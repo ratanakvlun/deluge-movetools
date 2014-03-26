@@ -190,8 +190,8 @@ class Core(CorePluginBase):
     component.get("CorePluginManager").register_status_field(
         MODULE_NAME, self._get_move_status)
 
-    def wrapper(obj, dest):
-      id = str(obj.handle.info_hash())
+    def wrapper(torrent, dest):
+      id = str(torrent.handle.info_hash())
       log.debug("[%s] (Wrapped) Move storage on: %s", PLUGIN_NAME, id)
 
       status = self.status.get(id, None)
@@ -201,17 +201,17 @@ class Core(CorePluginBase):
 
       self._cancel_clear(id)
 
-      old_path = obj.get_status(["save_path"])["save_path"]
+      old_path = torrent.get_status(["save_path"])["save_path"]
       if old_path == dest:
         self.status[id] = "%s: %s" % ("Error", "Same path")
         self._clear_move_status(id, self.timeout["error"])
         return False
 
       _orig_move_storage = self.orig_move_storage
-      result = _orig_move_storage(obj, dest)
+      result = _orig_move_storage(torrent, dest)
       if result:
         self.status[id] = "Moving"
-        self.progress[id] = Progress(obj, old_path, dest)
+        self.progress[id] = Progress(torrent, old_path, dest)
 
         if self.general["remove_empty"]:
           self.old_paths[id] = old_path
