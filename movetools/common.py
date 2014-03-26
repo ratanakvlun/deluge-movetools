@@ -46,6 +46,9 @@ PLUGIN_NAME = "MoveTools"
 MODULE_NAME = "movetools"
 DISPLAY_NAME = _("MoveTools")
 
+STATUS_NAME = _("Move Status")
+STATUS_MESSAGE = "%s_message" % MODULE_NAME
+
 
 def get_resource(filename):
   return pkg_resources.resource_filename(
