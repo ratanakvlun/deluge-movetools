@@ -52,11 +52,11 @@ import deluge.component as component
 from common import PLUGIN_NAME
 from common import MODULE_NAME
 from common import DISPLAY_NAME
+from common import STATUS_NAME
+from common import STATUS_MESSAGE
 from common import get_resource
 from common import dict_equals
 
-
-COLUMN_NAME = _("Move Status")
 
 log = logging.getLogger(__name__)
 
@@ -203,12 +203,12 @@ class GtkUI(GtkPluginBase):
     renderer = gtk.CellRendererProgress()
 
     component.get("TorrentView").add_column(
-      header=COLUMN_NAME,
+      header=STATUS_NAME,
       render=renderer,
       col_types=str,
       hidden=False,
       position=None,
-      status_field=[MODULE_NAME],
+      status_field=[STATUS_MESSAGE],
       function=self._render_cell,
       sortid=0,
       column_type="progress",
@@ -239,4 +239,4 @@ class GtkUI(GtkPluginBase):
         cell.set_property("text", _(status))
 
   def _remove_column(self):
-    component.get("TorrentView").remove_column(COLUMN_NAME)
+    component.get("TorrentView").remove_column(STATUS_NAME)

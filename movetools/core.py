@@ -53,6 +53,8 @@ from deluge.core.torrent import Torrent
 
 from common import PLUGIN_NAME
 from common import MODULE_NAME
+from common import STATUS_NAME
+from common import STATUS_MESSAGE
 
 
 CONFIG_FILE = "%s.conf" % MODULE_NAME
@@ -104,10 +106,21 @@ class TorrentMoveJob(object):
   def __init__(self, torrent, dest_path):
     self.torrent = torrent
     self.status = "Queued"
+    self.message = "Queued"
     self.src_path = torrent.get_status(["save_path"])["save_path"]
     self.dest_path = dest_path
     self.progress = Progress(torrent, self.src_path, self.dest_path)
 
+  def update(self):
+    self.progress.update()
+
+    if self.status == "Moving":
+      if self.progress.percent < 100.0:
+        percent_str = "%.2f" % self.progress.percent
+      else:
+        percent_str = "99.99"
+
+      self.message = "Moving %s" % percent_str
 
 class Core(CorePluginBase):
 
@@ -157,8 +170,10 @@ class Core(CorePluginBase):
     component.get("AlertManager").register_handler(
       "storage_moved_failed_alert", self.on_storage_moved_failed)
 
-    component.get("CorePluginManager").register_status_field(MODULE_NAME,
+    component.get("CorePluginManager").register_status_field(STATUS_NAME,
       self.get_move_status)
+    component.get("CorePluginManager").register_status_field(STATUS_MESSAGE,
+      self.get_move_message)
 
     self.orig_move_storage = Torrent.move_storage
     Torrent.move_storage = move_storage
@@ -179,7 +194,8 @@ class Core(CorePluginBase):
     for id in self.torrents:
       self._cancel_remove(id)
 
-    component.get("CorePluginManager").deregister_status_field(MODULE_NAME)
+    component.get("CorePluginManager").deregister_status_field(STATUS_MESSAGE)
+    component.get("CorePluginManager").deregister_status_field(STATUS_NAME)
 
     component.get("AlertManager").deregister_handler(
         self.on_storage_moved)
@@ -262,20 +278,15 @@ class Core(CorePluginBase):
 
   def get_move_status(self, id):
     if id not in self.torrents:
-      return ""
+      return None
 
-    status = self.torrents[id].status
+    return self.torrents[id].status
 
-    if status == "Moving":
-      percent = self.torrents[id].progress.percent
-      if percent < 100.0:
-        percent_str = "%.2f" % percent
-      else:
-        percent_str = "99.99"
+  def get_move_message(self, id):
+    if id not in self.torrents:
+      return None
 
-      status = "Moving %s" % percent_str
-
-    return status
+    return self.torrents[id].message
 
   def _update_loop(self):
 
@@ -297,17 +308,20 @@ class Core(CorePluginBase):
         self.active = None
 
     if self.active:
-      self.torrents[self.active].progress.update()
+      self.torrents[self.active].update()
 
     reactor.callLater(1.0, self._update_loop)
 
   def _report_result(self, id, type, status, message=""):
     if id in self.torrents:
       if message:
-        status = "%s: %s" % (status, message)
+        message = "%s: %s" % (status, message)
+      else:
+        message = status
 
-      log.debug("[%s] Status (%s): %s", PLUGIN_NAME, id, status)
+      log.debug("[%s] Status (%s): %s", PLUGIN_NAME, id, message)
       self.torrents[id].status = status
+      self.torrents[id].message = message
       self._schedule_remove(id, self.timeout.get(type, 0))
 
   def _remove_job(self, id):
