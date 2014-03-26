@@ -163,6 +163,11 @@ class Progress(object):
     self._paths = tuple(os.path.join(dest, file["path"]) for file in files)
     self.percent = 0.0
 
+  def update(self):
+
+    size = get_total_size(self._paths)
+    self.percent = float(size) / (self._total or 1) * 100
+
 
 class Core(CorePluginBase):
 
