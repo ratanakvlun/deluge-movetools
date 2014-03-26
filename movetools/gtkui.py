@@ -149,14 +149,21 @@ class GtkUI(GtkPluginBase):
     menu = gtk.MenuItem(DISPLAY_NAME)
     submenu = gtk.Menu()
 
-    status_item = gtk.MenuItem(_("Move Status"))
-    submenu.append(status_item)
+    move_item = gtk.MenuItem(_("Move"))
+    move_submenu = gtk.Menu()
+    move_item.set_submenu(move_submenu)
 
     item = gtk.MenuItem(_("Move Completed"))
     item.connect("activate", self._do_move_completed)
-    submenu.append(item)
+    move_submenu.append(item)
 
+    item = gtk.MenuItem(_("Cancel Pending"))
+    item.connect("activate", self._do_cancel_pending)
+    move_submenu.append(item)
+
+    status_item = gtk.MenuItem(_("Status"))
     status_submenu = gtk.Menu()
+    status_item.set_submenu(status_submenu)
 
     item = gtk.MenuItem(_("Clear"))
     item.connect("activate", self._do_clear_selected)
@@ -166,7 +173,8 @@ class GtkUI(GtkPluginBase):
     item.connect("activate", self._do_clear_all)
     status_submenu.append(item)
 
-    status_item.set_submenu(status_submenu)
+    submenu.append(move_item)
+    submenu.append(status_item)
     menu.set_submenu(submenu)
 
     return menu
@@ -175,6 +183,11 @@ class GtkUI(GtkPluginBase):
     ids = component.get("TorrentView").get_selected_torrents()
     log.debug("[%s] Requesting move completed for: %s", PLUGIN_NAME, ids)
     client.movetools.move_completed(ids)
+
+  def _do_cancel_pending(self, widget):
+    ids = component.get("TorrentView").get_selected_torrents()
+    log.debug("[%s] Requesting cancel pending for: %s", PLUGIN_NAME, ids)
+    client.movetools.cancel_pending(ids)
 
   def _do_clear_selected(self, widget):
     ids = component.get("TorrentView").get_selected_torrents()
