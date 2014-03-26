@@ -53,6 +53,7 @@ from common import PLUGIN_NAME
 from common import MODULE_NAME
 from common import DISPLAY_NAME
 from common import get_resource
+from common import dict_equals
 
 
 COLUMN_NAME = _("Move Status")
@@ -64,6 +65,8 @@ class GtkUI(GtkPluginBase):
 
   def enable(self):
     log.debug("[%s] Enabling GtkUI...", PLUGIN_NAME)
+
+    self.config = {}
 
     self.ui = gtk.glade.XML(get_resource("wnd_preferences.glade"))
 
@@ -122,13 +125,18 @@ class GtkUI(GtkPluginBase):
       },
     }
 
-    client.movetools.set_settings(config)
+    if not dict_equals(config, self.config):
+      client.movetools.set_settings(config)
+    else:
+      log.debug("[%s] No settings were changed", PLUGIN_NAME)
 
   def _do_load_settings(self):
     log.debug("[%s] Requesting get settings", PLUGIN_NAME)
     client.movetools.get_settings().addCallback(self._do_load)
 
   def _do_load(self, config):
+    self.config = config
+
     chk = self.ui.get_widget("chk_remove_empty")
     chk.set_active(config["general"]["remove_empty"])
 
