@@ -62,8 +62,6 @@ class GtkUI(GtkPluginBase):
   def enable(self):
     log.debug("[%s] Enabling GtkUI...", PLUGIN_NAME)
 
-    self._saving = False
-
     self.ui = gtk.glade.XML(get_resource("wnd_preferences.glade"))
 
     lbl = self.ui.get_widget("lbl_general")
@@ -111,8 +109,6 @@ class GtkUI(GtkPluginBase):
   def _do_save_settings(self):
     log.debug("[%s] Requesting set settings", PLUGIN_NAME)
 
-    self._saving = True
-
     config = {
       "general": {
         "remove_empty": self.ui.get_widget("chk_remove_empty").get_active(),
@@ -123,20 +119,10 @@ class GtkUI(GtkPluginBase):
       },
     }
 
-    def on_save_returned(result):
-      self._saving = False
-
-    client.movetools.set_settings(config).addCallbacks(
-      on_save_returned, on_save_returned)
+    client.movetools.set_settings(config)
 
   def _do_load_settings(self):
     log.debug("[%s] Requesting get settings", PLUGIN_NAME)
-
-    if self._saving:
-      log.debug("Load deferred: save in progess")
-      reactor.callLater(0.1, self._do_load_settings)
-      return
-
     client.movetools.get_settings().addCallback(self._do_load)
 
   def _do_load(self, config):
