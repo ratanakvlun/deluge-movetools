@@ -179,12 +179,12 @@ class Core(CorePluginBase):
     if not deluge.component.get("TorrentManager").session_started:
       deluge.component.get("EventManager").register_event_handler(
         "SessionStartedEvent", self._on_session_started)
-      log.debug("Waiting for session to start...")
+      log.debug("[%s] Waiting for session to start...", PLUGIN_NAME)
     else:
       reactor.callLater(0.1, self._initialize)
 
   def _on_session_started(self):
-    log.debug("Resuming initialization...")
+    log.debug("[%s] Resuming initialization...", PLUGIN_NAME)
     reactor.callLater(0.1, self._initialize)
 
   def _initialize(self):
