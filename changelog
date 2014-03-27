@@ -1,3 +1,11 @@
+Version 0.2.0.0
+- Progress estimation based on speed of previous transfers
+- Sidebar filters for move status
+- Cancel pending move operations
+
+- Use reactor based updating rather than threads
+- Explicitly process one move operation at a time
+
 Version 0.1.8.1
 - Deinit column last due to bug in Deluge column removal
 
