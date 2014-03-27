@@ -118,7 +118,7 @@ class GtkUI(GtkPluginBase):
     config = {
       "general": {
         "estimated_speed":
-          self.ui.get_widget("spn_estimated_speed").get_value()*2**10,
+          self.ui.get_widget("spn_estimated_speed").get_value(),
         "remove_empty": self.ui.get_widget("chk_remove_empty").get_active(),
       },
       "timeout": {
@@ -140,7 +140,7 @@ class GtkUI(GtkPluginBase):
     self.config = config
 
     spn = self.ui.get_widget("spn_estimated_speed")
-    spn.set_value(config["general"]["estimated_speed"]/2**10)
+    spn.set_value(config["general"]["estimated_speed"])
     chk = self.ui.get_widget("chk_remove_empty")
     chk.set_active(config["general"]["remove_empty"])
 
