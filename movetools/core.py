@@ -317,7 +317,7 @@ class Core(CorePluginBase):
       self.torrents[id].finish()
       self._report_result(id, "success", "Done")
 
-      if self.torrents[id].size >= self.config["general"]["estimated_speed"]:
+      if self.torrents[id].size >= self.config["general"]["estimated_speed"]*2:
         speed = self.torrents[id].get_avg_speed()
         self.config["general"]["estimated_speed"] = \
           int((self.config["general"]["estimated_speed"]*0.5 + speed*1.5)/2)
