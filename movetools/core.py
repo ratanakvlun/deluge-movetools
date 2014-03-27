@@ -152,10 +152,11 @@ class Progress(object):
     if size == self.total_size:
       # OS reported full size, so use estimation
       size = self._estimated_speed * self.get_elapsed()
+      if size > self.total_size:
+        size = self.total_size
 
-    if self.size < size:
-      self.size = size
-      self.percent = float(self.size) / (self.total_size or 1) * 100
+    self.size = size
+    self.percent = float(self.size) / (self.total_size or 1) * 100
 
   def _update_status(self):
     if self.status == "Moving":
