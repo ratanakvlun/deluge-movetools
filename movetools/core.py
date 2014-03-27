@@ -70,6 +70,13 @@ DEFAULT_PREFS = {
   },
 }
 
+INIT_FILTERS = lambda: {
+  "Moving": 0,
+  "Queued": 0,
+  "Done": 0,
+  "Error": 0,
+}
+
 ALIVE_STATUS = ("Moving", "Queued")
 
 ESTIMATED_SPEED = 20*10**6
@@ -213,7 +220,8 @@ class Core(CorePluginBase):
     component.get("CorePluginManager").register_status_field(STATUS_MESSAGE,
       self.get_move_message)
 
-    component.get("FilterManager").register_tree_field(STATUS_NAME)
+    component.get("FilterManager").register_tree_field(STATUS_NAME,
+      INIT_FILTERS)
 
     self.orig_move_storage = Torrent.move_storage
     Torrent.move_storage = move_storage
