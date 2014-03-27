@@ -280,6 +280,10 @@ class Core(CorePluginBase):
     log.debug("[%s] Core disabled", PLUGIN_NAME)
 
   @export
+  def is_initialized(self):
+    return self.initialized
+
+  @export
   def set_settings(self, options):
     log.debug("[%s] Setting options", PLUGIN_NAME)
     self.general.update(options["general"])

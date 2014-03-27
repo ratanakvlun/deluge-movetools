@@ -57,6 +57,8 @@ from common import STATUS_MESSAGE
 from common import get_resource
 from common import dict_equals
 
+INIT_POLLING_INTERVAL = 3.0
+
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +67,20 @@ class GtkUI(GtkPluginBase):
 
   def enable(self):
     log.debug("[%s] Enabling GtkUI...", PLUGIN_NAME)
+    self._poll_init()
+
+  def _poll_init(self):
+    client.movetools.is_initialized().addCallback(self._check_init)
+
+  def _check_init(self, result):
+    log.debug("[%s] Waiting for core to be initialized...", PLUGIN_NAME)
+    if result == True:
+      self._finish_init()
+    else:
+      reactor.callLater(INIT_POLLING_INTERVAL, self._poll_init)
+
+  def _finish_init(self):
+    log.debug("[%s] Resuming initialization...", PLUGIN_NAME)
 
     self.config = {}
 
