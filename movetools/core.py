@@ -56,6 +56,7 @@ from common import PLUGIN_NAME
 from common import MODULE_NAME
 from common import STATUS_NAME
 from common import STATUS_MESSAGE
+from common import normalize_dict
 
 
 CONFIG_FILE = "%s.conf" % MODULE_NAME
@@ -63,6 +64,7 @@ CONFIG_FILE = "%s.conf" % MODULE_NAME
 DEFAULT_PREFS = {
   "general": {
     "remove_empty": False,
+    "estimated_speed": 20*2**20,
   },
   "timeout": {
     "success": -1.0,
@@ -79,7 +81,6 @@ INIT_FILTERS = lambda: {
 
 ALIVE_STATUS = ("Moving", "Queued")
 
-ESTIMATED_SPEED = 20*10**6
 UPDATE_INTERVAL = 2.0
 
 
@@ -206,7 +207,9 @@ class Core(CorePluginBase):
     self.general = self.config["general"]
     self.timeout = self.config["timeout"]
 
-    self.estimated_speed = ESTIMATED_SPEED
+    normalize_dict(self.general, DEFAULT_PREFS["general"])
+    normalize_dict(self.timeout, DEFAULT_PREFS["timeout"])
+
     self.torrents = {}
     self.calls = {}
     self.queue = []
@@ -254,6 +257,7 @@ class Core(CorePluginBase):
     component.get("AlertManager").deregister_handler(
         self.on_storage_moved_failed)
 
+    self.config.save()
     deluge.configmanager.close(CONFIG_FILE)
 
     self._rpc_deregister(PLUGIN_NAME)
@@ -265,7 +269,6 @@ class Core(CorePluginBase):
     log.debug("[%s] Setting options", PLUGIN_NAME)
     self.general.update(options["general"])
     self.timeout.update(options["timeout"])
-    self.config.save()
 
   @export
   def get_settings(self):
@@ -314,9 +317,12 @@ class Core(CorePluginBase):
       self.torrents[id].finish()
       self._report_result(id, "success", "Done")
 
-      if self.torrents[id].size >= self.estimated_speed:
+      if self.torrents[id].size >= self.config["general"]["estimated_speed"]:
         speed = self.torrents[id].get_avg_speed()
-        self.estimated_speed = (self.estimated_speed*0.5 + speed*1.5)/2
+        self.config["general"]["estimated_speed"] = \
+          int((self.config["general"]["estimated_speed"]*0.5 + speed*1.5)/2)
+        log.debug("[%s] New estimated speed: %r KiB/s", PLUGIN_NAME,
+          self.config["general"]["estimated_speed"]/2**10)
 
       if self.general["remove_empty"]:
         try:
@@ -356,7 +362,7 @@ class Core(CorePluginBase):
         if id in self.torrents:
           job = self.torrents[id]
           if self.orig_move_storage(job.torrent, job.dest_path):
-            job.start(self.estimated_speed)
+            job.start(self.config["general"]["estimated_speed"])
             self.active = id
             break
 
