@@ -38,6 +38,7 @@
 #
 
 
+import time
 import os
 import os.path
 import copy
@@ -71,7 +72,11 @@ DEFAULT_PREFS = {
 
 ALIVE_STATUS = ("Moving", "Queued")
 
+ESTIMATED_SPEED = 20*10**6
+
+
 log = logging.getLogger(__name__)
+
 
 def get_total_size(paths):
   size = 0
@@ -87,40 +92,72 @@ def get_total_size(paths):
 
 class Progress(object):
 
-  def __init__(self, torrent, src, dest):
-    files = torrent.get_files()
-
-    src_paths = (os.path.join(src, file["path"]) for file in files)
-    self._total = get_total_size(src_paths)
-
-    self._paths = tuple(os.path.join(dest, file["path"]) for file in files)
-    self.percent = 0.0
-
-  def update(self):
-    size = get_total_size(self._paths)
-    self.percent = float(size) / (self._total or 1) * 100
-
-
-class TorrentMoveJob(object):
-
   def __init__(self, torrent, dest_path):
     self.torrent = torrent
+    self._start_time = None
+    self._end_time = None
+
     self.status = "Queued"
     self.message = "Queued"
+
     self.src_path = torrent.get_status(["save_path"])["save_path"]
     self.dest_path = dest_path
-    self.progress = Progress(torrent, self.src_path, self.dest_path)
+
+    files = torrent.get_files()
+
+    src_paths = (os.path.join(self.src_path, f["path"]) for f in files)
+    self.total_size = get_total_size(src_paths)
+
+    self._paths = tuple(os.path.join(dest_path, f["path"]) for f in files)
+    self.size = 0
+
+    self.percent = 0.0
+    self._estimated_speed = None
+
+  def start(self, estimated_speed):
+    self.status = "Moving"
+    self.message = "Moving"
+    self._start_time = time.time()
+    self._estimated_speed = estimated_speed
+
+  def finish(self):
+    self._end_time = time.time()
+    self.size = self.total_size
+    self.percent = 100.0
+
+  def get_elapsed(self):
+    if self._end_time:
+      elapsed = self._end_time - self._start_time
+    else:
+      elapsed = time.time() - self._start_time
+    return elapsed
+
+  def get_avg_speed(self):
+    return self.size/(self.get_elapsed() or 1)
 
   def update(self):
-    self.progress.update()
+    self._update_progress()
+    self._update_status()
 
+  def _update_progress(self):
+    size = get_total_size(self._paths)
+    if size == self.total_size:
+      # OS reported full size, so use estimation
+      size = self._estimated_speed * self.get_elapsed()
+
+    if self.size < size:
+      self.size = size
+      self.percent = float(self.size) / (self.total_size or 1) * 100
+
+  def _update_status(self):
     if self.status == "Moving":
-      if self.progress.percent < 100.0:
-        percent_str = "%.2f" % self.progress.percent
+      if self.percent < 100.0:
+        percent_str = "%.2f" % self.percent
       else:
         percent_str = "99.99"
 
       self.message = "Moving %s" % percent_str
+
 
 class Core(CorePluginBase):
 
@@ -137,7 +174,7 @@ class Core(CorePluginBase):
         else:
           self._remove_job(id)
 
-      self.torrents[id] = TorrentMoveJob(torrent, dest_path)
+      self.torrents[id] = Progress(torrent, dest_path)
 
       if not dest_path:
         self._report_result(id, "error", "Error", "Empty path")
@@ -160,6 +197,7 @@ class Core(CorePluginBase):
     self.general = self.config["general"]
     self.timeout = self.config["timeout"]
 
+    self.estimated_speed = ESTIMATED_SPEED
     self.torrents = {}
     self.calls = {}
     self.queue = []
@@ -263,7 +301,12 @@ class Core(CorePluginBase):
     id = str(alert.handle.info_hash())
     if id in self.torrents:
       self.active = None
+      self.torrents[id].finish()
       self._report_result(id, "success", "Done")
+
+      if self.torrents[id].size >= self.estimated_speed:
+        speed = self.torrents[id].get_avg_speed()
+        self.estimated_speed = (self.estimated_speed*0.5 + speed*1.5)/2
 
       if self.general["remove_empty"]:
         try:
@@ -303,7 +346,7 @@ class Core(CorePluginBase):
         if id in self.torrents:
           job = self.torrents[id]
           if self.orig_move_storage(job.torrent, job.dest_path):
-            job.status = "Moving"
+            job.start(self.estimated_speed)
             self.active = id
             break
 
