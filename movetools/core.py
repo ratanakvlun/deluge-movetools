@@ -80,6 +80,7 @@ INIT_FILTERS = lambda: {
 ALIVE_STATUS = ("Moving", "Queued")
 
 ESTIMATED_SPEED = 20*10**6
+UPDATE_INTERVAL = 2.0
 
 
 log = logging.getLogger(__name__)
@@ -365,7 +366,7 @@ class Core(CorePluginBase):
     if self.active:
       self.torrents[self.active].update()
 
-    reactor.callLater(1.0, self._update_loop)
+    reactor.callLater(UPDATE_INTERVAL, self._update_loop)
 
   def _report_result(self, id, type, status, message=""):
     if id in self.torrents:
