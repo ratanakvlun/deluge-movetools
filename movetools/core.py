@@ -175,7 +175,7 @@ class Core(CorePluginBase):
 
     def move_storage(torrent, dest_path):
       id = str(torrent.handle.info_hash())
-      log.debug("[%s] Moving (%s)", PLUGIN_NAME, id)
+      log.debug("[%s] Queueing (%s)", PLUGIN_NAME, id)
 
       if id in self.torrents:
         if self.torrents[id].status in ALIVE_STATUS:
@@ -321,8 +321,8 @@ class Core(CorePluginBase):
         speed = self.torrents[id].get_avg_speed()
         self.config["general"]["estimated_speed"] = \
           int((self.config["general"]["estimated_speed"]*0.5 + speed*1.5)/2)
-        log.debug("[%s] New estimated speed: %r KiB/s", PLUGIN_NAME,
-          self.config["general"]["estimated_speed"]/2**10)
+        log.debug("[%s] New estimated speed: %r B/s", PLUGIN_NAME,
+          self.config["general"]["estimated_speed"])
 
       if self.general["remove_empty"]:
         try:
@@ -362,6 +362,7 @@ class Core(CorePluginBase):
         if id in self.torrents:
           job = self.torrents[id]
           if self.orig_move_storage(job.torrent, job.dest_path):
+            log.debug("[%s] Moving (%s)", PLUGIN_NAME, id)
             job.start(self.config["general"]["estimated_speed"])
             self.active = id
             break
