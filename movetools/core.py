@@ -172,6 +172,22 @@ class Progress(object):
 class Core(CorePluginBase):
 
   def enable(self):
+    log.debug("[%s] Enabling Core...", PLUGIN_NAME)
+
+    self.initialized = False
+
+    if not deluge.component.get("TorrentManager").session_started:
+      deluge.component.get("EventManager").register_event_handler(
+        "SessionStartedEvent", self._on_session_started)
+      log.debug("Waiting for session to start...")
+    else:
+      reactor.callLater(0.1, self._initialize)
+
+  def _on_session_started(self):
+    log.debug("Resuming initialization...")
+    reactor.callLater(0.1, self._initialize)
+
+  def _initialize(self):
 
     def move_storage(torrent, dest_path):
       id = str(torrent.handle.info_hash())
@@ -196,10 +212,6 @@ class Core(CorePluginBase):
 
       self.queue.append(id)
       return True
-
-    log.debug("[%s] Enabling Core...", PLUGIN_NAME)
-
-    self.initialized = False
 
     self.config = deluge.configmanager.ConfigManager(CONFIG_FILE,
       copy.deepcopy(DEFAULT_PREFS))
@@ -241,6 +253,9 @@ class Core(CorePluginBase):
     log.debug("[%s] Disabling Core...", PLUGIN_NAME)
 
     self.initialized = False
+
+    deluge.component.get("EventManager").deregister_event_handler(
+      "SessionStartedEvent", self._on_session_started)
 
     Torrent.move_storage = self.orig_move_storage
 
