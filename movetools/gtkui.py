@@ -113,10 +113,12 @@ class GtkUI(GtkPluginBase):
     log.debug("[%s] GtkUI disabled", PLUGIN_NAME)
 
   def _do_save_settings(self):
-    log.debug("[%s] Requesting set settings", PLUGIN_NAME)
+    log.debug("[%s] Saving settings", PLUGIN_NAME)
 
     config = {
       "general": {
+        "estimated_speed":
+          self.ui.get_widget("spn_estimated_speed").get_value()*2**10,
         "remove_empty": self.ui.get_widget("chk_remove_empty").get_active(),
       },
       "timeout": {
@@ -131,12 +133,14 @@ class GtkUI(GtkPluginBase):
       log.debug("[%s] No settings were changed", PLUGIN_NAME)
 
   def _do_load_settings(self):
-    log.debug("[%s] Requesting get settings", PLUGIN_NAME)
+    log.debug("[%s] Requesting settings", PLUGIN_NAME)
     client.movetools.get_settings().addCallback(self._do_load)
 
   def _do_load(self, config):
     self.config = config
 
+    spn = self.ui.get_widget("spn_estimated_speed")
+    spn.set_value(config["general"]["estimated_speed"]/2**10)
     chk = self.ui.get_widget("chk_remove_empty")
     chk.set_active(config["general"]["remove_empty"])
 
