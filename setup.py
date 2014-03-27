@@ -1,7 +1,7 @@
 #
 # setup.py
 #
-# Copyright (C) 2009 Ratanak Lun <ratanakvlun@gmail.com>
+# Copyright (C) 2014 Ratanak Lun <ratanakvlun@gmail.com>
 #
 # Basic plugin template created by:
 # Copyright (C) 2008 Martijn Voncken <mvoncken@gmail.com>
@@ -42,7 +42,7 @@ from setuptools import setup
 __plugin_name__ = "MoveTools"
 __author__ = "Ratanak Lun"
 __author_email__ = "ratanakvlun@gmail.com"
-__version__ = "0.1.8.1"
+__version__ = "0.2.0.0"
 __url__ = "http://github.com/ratanakvlun"
 __license__ = "GPLv3"
 __description__ = "Tools for moving torrents"
