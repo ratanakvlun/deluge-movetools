@@ -162,7 +162,7 @@ class Progress(object):
   def _update_status(self):
     if self.status == "Moving":
       if self.percent < 100.0:
-        percent_str = "%.2f" % self.percent
+        percent_str = ("%.6f" % self.percent)[:-4]
       else:
         percent_str = "99.99"
 
