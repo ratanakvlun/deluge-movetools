@@ -38,6 +38,7 @@
 #
 
 
+import copy
 import os
 import pkg_resources
 
@@ -53,6 +54,17 @@ STATUS_MESSAGE = "%s_message" % MODULE_NAME
 def get_resource(filename):
   return pkg_resources.resource_filename(
       MODULE_NAME, os.path.join("data", filename))
+
+
+def normalize_dict(dict_in, template):
+
+  for key in dict_in.keys():
+    if key not in template:
+      del dict_in[key]
+
+  for key in template:
+    if key not in dict_in:
+      dict_in[key] = copy.deepcopy(template[key])
 
 
 def dict_equals(a, b):
